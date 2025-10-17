@@ -1,31 +1,33 @@
-# Redis Learning Project - LockN'Roll
+# LockN'Roll - State Management Platform
 
-A comprehensive Spring Boot application demonstrating Redis caching and distributed locking patterns with PostgreSQL and MongoDB integration.
+A comprehensive Spring Boot application implementing a state management platform with configurable approval workflows, JWT authentication, and role-based access control for fruit management system.
 
 ## 🎯 Project Overview
 
-This project is designed to help you learn Redis concepts through practical implementation:
+This project demonstrates a complete state management platform with:
 
-- **Redis Caching**: Spring Boot cache abstraction with Redis backend
-- **Distributed Locking**: Using Redisson for thread-safe operations
-- **Multi-threaded Testing**: Comprehensive test scenarios with concurrent access
-- **Transaction Logging**: MongoDB integration for audit trails
-- **Real-world Use Cases**: Fruit inventory management system
+- **🔐 JWT Authentication & Authorization** - Secure user authentication with role-based access control
+- **📋 Configurable Approval Workflows** - Multi-tier approval processes with dependencies
+- **👥 User Management** - Role-based user system (Admin, BackOffice, Seller, Approvers)
+- **📊 Dashboard APIs** - Personalized dashboards for different user personas
+- **🔄 Task Management** - Task assignment with dependency tracking
+- **📈 State Management** - Entity state transitions with audit trails
+- **🗄️ Multi-Database Architecture** - PostgreSQL for entities, MongoDB for transactions, Redis for caching
 
 ## 🏗️ Architecture
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Spring Boot   │    │      Redis      │    │   PostgreSQL    │
-│   Application   │◄──►│   (Cache +      │    │   (Fruit Data)  │
-│                 │    │    Locks)       │    │                 │
+│   Application   │◄──►│   (Cache +      │    │   (Entities)    │
+│                 │    │    Sessions)    │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
          │                       │                       │
          │                       │                       │
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   REST API      │    │   Distributed   │    │   MongoDB       │
-│   Endpoints     │    │   Locking       │    │   (Transactions)│
+│   REST API      │    │   JWT Tokens    │    │   MongoDB       │
+│   Endpoints     │    │   & Security    │    │   (Transactions)│
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -94,191 +96,280 @@ curl http://localhost:8080/actuator/health
 curl http://localhost:8080/api/fruits
 ```
 
-## 📚 Learning Modules
+## 🔐 Authentication & Authorization
 
-### Module 1: Redis Caching Basics
+### Default Users
 
-**What you'll learn:**
-- Spring Boot cache abstraction
-- Redis as cache backend
-- Cache eviction strategies
-- Cache performance benefits
+The application initializes with the following default users:
 
-**Key Files:**
-- `FruitService.java` - Cache annotations (`@Cacheable`, `@CachePut`, `@CacheEvict`)
-- `RedisConfig.java` - Cache configuration
-- `FruitServiceConcurrencyTest.java` - Cache behavior tests
+| Username | Password | Role | Description |
+|----------|----------|------|-------------|
+| `admin` | `admin123` | ADMIN_ROLE | System administrator |
+| `backoffice` | `backoffice123` | BACKOFFICE_ROLE | Back office operations |
+| `seller1` | `seller123` | SELLER_ROLE | Fruit seller |
+| `finance1` | `finance123` | FINANCE_APPROVER_ROLE | Finance approver |
+| `quality1` | `quality123` | QUALITY_APPROVER_ROLE | Quality approver |
+| `manager1` | `manager123` | MANAGER_APPROVER_ROLE | Manager approver |
 
-**Hands-on Exercise:**
+### Authentication Flow
+
 ```bash
-# 1. Start the application
-mvn spring-boot:run
-
-# 2. Make multiple requests to see cache behavior
-curl http://localhost:8080/api/fruits/1
-curl http://localhost:8080/api/fruits/1  # Should be faster (cached)
-
-# 3. Update the fruit to see cache invalidation
-curl -X PUT http://localhost:8080/api/fruits/1 \
+# 1. Login to get JWT token
+curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"name":"Updated Apple","price":3.00,"quantity":90,"description":"Updated description","category":"Fruit"}'
+  -d '{"usernameOrEmail": "seller1", "password": "seller123"}'
 
-# 4. Check cache invalidation
-curl http://localhost:8080/api/fruits/1  # Should fetch fresh data
+# 2. Use token in subsequent requests
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:8080/api/dashboard
 ```
 
-### Module 2: Distributed Locking
+## 📋 Core Features
 
-**What you'll learn:**
-- Race condition prevention
-- Distributed lock patterns
-- Lock timeout handling
-- Thread-safe operations
+### 1. User Management
 
-**Key Files:**
-- `DistributedLockService.java` - Lock implementation
-- `FruitService.java` - Lock usage in business logic
-- `FruitServiceConcurrencyTest.java` - Concurrency tests
+**Endpoints:**
+- `POST /api/auth/register` - Register new user
+- `POST /api/auth/login` - User login
+- `GET /api/users` - Get all users (Admin only)
+- `POST /api/users` - Create user (Admin only)
 
-**Hands-on Exercise:**
+**Example:**
 ```bash
-# Run concurrency tests to see locking in action
-mvn test -Dtest=FruitServiceConcurrencyTest#testConcurrentPurchases
-
-# Watch the logs to see lock acquisition and release
+# Register a new seller
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "newseller",
+    "email": "newseller@example.com",
+    "password": "password123",
+    "firstName": "New",
+    "lastName": "Seller"
+  }'
 ```
 
-### Module 3: Multi-threaded Scenarios
+### 2. Workflow Management
 
-**What you'll learn:**
-- Concurrent access patterns
-- Thread safety verification
-- Performance under load
-- Debugging concurrent issues
+**Endpoints:**
+- `GET /api/workflows` - Get all workflows
+- `POST /api/workflows` - Create workflow (Admin only)
+- `GET /api/workflow-instances` - Get workflow instances
+- `POST /api/workflow-instances` - Create workflow instance
 
-**Test Scenarios:**
-1. **Concurrent Purchases**: Multiple threads buying the same fruit
-2. **Mixed Operations**: Simultaneous purchases and restocks
-3. **Cache Behavior**: Cache hits/misses under concurrency
-4. **Lock Timeouts**: Handling lock contention
-
-**Run All Tests:**
+**Example:**
 ```bash
-mvn test
+# Get all workflows
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:8080/api/workflows
 ```
 
-### Module 4: Transaction Logging
+### 3. Task Management
 
-**What you'll learn:**
-- Audit trail implementation
-- MongoDB integration
-- Transaction tracking
-- Debugging with logs
+**Endpoints:**
+- `GET /api/tasks` - Get all tasks
+- `GET /api/tasks/assigned/{userId}` - Get tasks assigned to user
+- `PUT /api/tasks/{taskId}/status` - Update task status
 
-**Key Files:**
-- `FruitTransaction.java` - Transaction entity
-- `FruitTransactionRepository.java` - MongoDB repository
-- `FruitService.java` - Transaction logging
-
-**Explore Transactions:**
+**Example:**
 ```bash
-# 1. Perform some operations
-curl -X POST http://localhost:8080/api/fruits/1/purchase?quantity=5
-curl -X POST http://localhost:8080/api/fruits/1/restock?quantity=10
-
-# 2. Check MongoDB for transaction logs
-# Connect to MongoDB and query:
-# db.fruit_transactions.find().sort({timestamp: -1}).limit(10)
+# Get tasks assigned to current user
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:8080/api/tasks/assigned/1
 ```
 
-## 🧪 Testing Guide
+### 4. Fruit Workflow Integration
 
-### Running Tests
+**Endpoints:**
+- `GET /api/fruits/workflow/draft` - Get draft fruits
+- `POST /api/fruits/workflow/{fruitId}/submit` - Submit fruit for approval
+- `GET /api/fruits/workflow/pending` - Get pending approval fruits
+
+**Example:**
+```bash
+# Submit fruit for approval
+curl -X POST http://localhost:8080/api/fruits/workflow/1/submit \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"submittedBy": "seller1", "comments": "Ready for approval"}'
+```
+
+### 5. Dashboard APIs
+
+**Endpoints:**
+- `GET /api/dashboard` - Get current user's dashboard
+- `GET /api/dashboard/admin` - Admin dashboard
+- `GET /api/dashboard/seller` - Seller dashboard
+- `GET /api/dashboard/approver` - Approver dashboard
+
+**Example:**
+```bash
+# Get seller dashboard
+curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  http://localhost:8080/api/dashboard/seller
+```
+
+## 🎭 User Personas & Dashboards
+
+### 1. Admin/BackOffice Dashboard
+- **Overview**: System-wide statistics and management
+- **Features**: 
+  - All pending tasks across the system
+  - Active workflow instances
+  - User management
+  - System statistics
+
+### 2. Seller Dashboard
+- **Overview**: Personal fruit management and tracking
+- **Features**:
+  - My submitted fruits
+  - Application status tracking
+  - Fruit status counts (Draft, Pending, Approved, Rejected)
+
+### 3. Approver Dashboard
+- **Overview**: Task management and approval workflow
+- **Features**:
+  - Assigned tasks
+  - Pending approvals
+  - Workflow instance tracking
+
+## 🔄 Workflow System
+
+### Workflow Configuration
+
+The system supports configurable approval workflows with:
+
+- **Multi-tier Approvals**: Finance → Quality → Manager
+- **Dependencies**: Parent tasks must complete before dependent tasks
+- **Role-based Assignment**: Tasks assigned to specific roles
+- **Conditional Logic**: Support for different approval paths
+
+### Workflow States
+
+| State | Description |
+|-------|-------------|
+| `DRAFT` | Initial state, not submitted |
+| `PENDING_APPROVAL` | Submitted, awaiting approval |
+| `IN_PROGRESS` | Workflow in progress |
+| `APPROVED` | All approvals completed |
+| `REJECTED` | Rejected at any stage |
+| `CANCELLED` | Workflow cancelled |
+
+### Task States
+
+| State | Description |
+|-------|-------------|
+| `PENDING` | Task created, not started |
+| `IN_PROGRESS` | Task being worked on |
+| `COMPLETED` | Task completed successfully |
+| `REJECTED` | Task rejected |
+| `CANCELLED` | Task cancelled |
+
+## 🧪 Testing the System
+
+### 1. Complete Workflow Test
 
 ```bash
-# Run all tests
-mvn test
+# 1. Login as seller
+SELLER_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"usernameOrEmail": "seller1", "password": "seller123"}' | \
+  jq -r '.accessToken')
 
-# Run specific test class
-mvn test -Dtest=FruitServiceConcurrencyTest
+# 2. Submit fruit for approval
+curl -X POST http://localhost:8080/api/fruits/workflow/1/submit \
+  -H "Authorization: Bearer $SELLER_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"submittedBy": "seller1", "comments": "Ready for approval"}'
 
-# Run specific test method
-mvn test -Dtest=FruitServiceConcurrencyTest#testConcurrentPurchases
+# 3. Login as finance approver
+FINANCE_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"usernameOrEmail": "finance1", "password": "finance123"}' | \
+  jq -r '.accessToken')
 
-# Run with verbose output
-mvn test -Dtest=FruitServiceConcurrencyTest -X
+# 4. Get assigned tasks
+curl -H "Authorization: Bearer $FINANCE_TOKEN" \
+  http://localhost:8080/api/tasks/assigned/4
+
+# 5. Approve task
+curl -X PUT http://localhost:8080/api/tasks/1/status \
+  -H "Authorization: Bearer $FINANCE_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "COMPLETED", "comments": "Finance approval completed"}'
 ```
 
-### Understanding Test Output
+### 2. Dashboard Testing
 
-When you run concurrency tests, you'll see output like:
+```bash
+# Test different dashboard views
+curl -H "Authorization: Bearer $SELLER_TOKEN" \
+  http://localhost:8080/api/dashboard/seller
+
+curl -H "Authorization: Bearer $FINANCE_TOKEN" \
+  http://localhost:8080/api/dashboard/approver
+
+# Admin dashboard (requires admin token)
+ADMIN_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"usernameOrEmail": "admin", "password": "admin123"}' | \
+  jq -r '.accessToken')
+
+curl -H "Authorization: Bearer $ADMIN_TOKEN" \
+  http://localhost:8080/api/dashboard/admin
 ```
-=== Starting Concurrent Purchase Test ===
-Initial stock: 100
-Number of threads: 10
-Purchase quantity per thread: 5
-Thread 0 starting purchase...
-Thread 1 starting purchase...
-...
-Thread 0 acquired lock: fruit:purchase:1 in 15ms
-Thread 0 completed purchase. Remaining stock: 95
-...
-Expected final quantity: 50
-Actual final quantity: 50
-Total transactions logged: 10
-```
 
-### Key Observations
+## 🗄️ Database Schema
 
-1. **Lock Acquisition**: Notice the time it takes to acquire locks
-2. **Sequential Processing**: Operations are processed one at a time
-3. **Data Consistency**: Final quantities are always correct
-4. **Transaction Logging**: All operations are logged with thread information
+### Core Entities
+
+#### Users & Roles
+- **users**: User accounts with authentication
+- **roles**: System roles (Admin, Seller, Approvers)
+- **permissions**: Granular permissions
+- **user_roles**: Many-to-many user-role mapping
+
+#### Workflow System
+- **workflows**: Workflow templates
+- **workflow_steps**: Individual steps in workflows
+- **workflow_step_dependencies**: Dependencies between steps
+- **workflow_instances**: Active workflow executions
+- **tasks**: Individual work items
+- **task_dependencies**: Task dependencies
+- **approvals**: Approval decisions
+
+#### Fruit Management
+- **fruits**: Fruit entities with state management
+- **fruit_transactions**: MongoDB transaction logs
 
 ## 🔍 Monitoring and Debugging
 
 ### Application Logs
 
-The application provides detailed logging:
-
 ```bash
 # View application logs
-tail -f logs/redis-learning.log
+tail -f logs/application.log
 
 # Filter for specific operations
-grep "Thread" logs/redis-learning.log
-grep "lock" logs/redis-learning.log
-grep "cache" logs/redis-learning.log
-```
-
-### Redis Monitoring
-
-```bash
-# Connect to Redis CLI
-redis-cli
-
-# Monitor Redis commands
-MONITOR
-
-# Check cache keys
-KEYS fruits:*
-
-# Check lock keys
-KEYS *lock*
-
-# Get key information
-INFO keyspace
+grep "Workflow" logs/application.log
+grep "Task" logs/application.log
+grep "Authentication" logs/application.log
 ```
 
 ### Database Queries
 
 **PostgreSQL:**
 ```sql
--- Check fruit data
-SELECT * FROM fruits ORDER BY id;
+-- Check workflow instances
+SELECT * FROM workflow_instances ORDER BY created_at DESC;
 
--- Check recent updates
-SELECT * FROM fruits WHERE updated_at > NOW() - INTERVAL '1 hour';
+-- Check tasks by status
+SELECT * FROM tasks WHERE status = 'PENDING';
+
+-- Check user roles
+SELECT u.username, r.name as role 
+FROM users u 
+JOIN user_roles ur ON u.id = ur.user_id 
+JOIN roles r ON ur.role_id = r.id;
 ```
 
 **MongoDB:**
@@ -290,198 +381,143 @@ db.fruit_transactions.find().sort({timestamp: -1}).limit(10);
 db.fruit_transactions.aggregate([
   {$group: {_id: "$operationType", count: {$sum: 1}}}
 ]);
-
-// Find transactions with lock info
-db.fruit_transactions.find({lockAcquired: true});
 ```
 
-## 🎮 Interactive Examples
-
-### Example 1: Cache Performance Test
+### Redis Monitoring
 
 ```bash
-# Create a script to test cache performance
-cat > test_cache.sh << 'EOF'
-#!/bin/bash
-echo "Testing cache performance..."
+# Connect to Redis CLI
+redis-cli
 
-# First request (cache miss)
-echo "First request (cache miss):"
-time curl -s http://localhost:8080/api/fruits/1 > /dev/null
+# Check session keys
+KEYS spring:session:*
 
-# Second request (cache hit)
-echo "Second request (cache hit):"
-time curl -s http://localhost:8080/api/fruits/1 > /dev/null
+# Check cache keys
+KEYS fruits:*
 
-# Third request (cache hit)
-echo "Third request (cache hit):"
-time curl -s http://localhost:8080/api/fruits/1 > /dev/null
-EOF
-
-chmod +x test_cache.sh
-./test_cache.sh
-```
-
-### Example 2: Concurrency Stress Test
-
-```bash
-# Create a script to simulate concurrent purchases
-cat > stress_test.sh << 'EOF'
-#!/bin/bash
-echo "Starting stress test..."
-
-# Start multiple concurrent purchases
-for i in {1..20}; do
-  curl -X POST "http://localhost:8080/api/fruits/1/purchase?quantity=1" &
-done
-
-# Wait for all requests to complete
-wait
-
-echo "Stress test completed. Check the logs for lock behavior."
-EOF
-
-chmod +x stress_test.sh
-./stress_test.sh
+# Monitor Redis commands
+MONITOR
 ```
 
 ## 🚨 Common Issues and Solutions
 
-### Issue 1: Redis Connection Failed
+### Issue 1: Authentication Failed
 ```
-Error: Unable to connect to Redis
-```
-**Solution:**
-```bash
-# Check if Redis is running
-redis-cli ping
-
-# Start Redis if not running
-redis-server
-```
-
-### Issue 2: Database Connection Issues
-```
-Error: Connection to PostgreSQL failed
+Error: 401 Unauthorized
 ```
 **Solution:**
-```bash
-# Check PostgreSQL status
-pg_ctl status
+- Ensure JWT token is included in Authorization header
+- Check if token has expired
+- Verify user credentials
 
-# Start PostgreSQL
-pg_ctl start
-
-# Verify database exists
-psql -l | grep locknroll
+### Issue 2: Permission Denied
 ```
-
-### Issue 3: Test Failures
-```
-Error: Tests failing with timeout
+Error: 403 Forbidden
 ```
 **Solution:**
-- Ensure all services (Redis, PostgreSQL, MongoDB) are running
-- Check if test databases exist
-- Increase timeout values in test configuration
+- Check user roles and permissions
+- Ensure user has required role for the operation
+- Verify workflow step assignments
 
-### Issue 4: Lock Timeout Errors
+### Issue 3: Workflow Instance Not Found
 ```
-Error: Failed to acquire lock within timeout
+Error: Workflow instance not found
 ```
 **Solution:**
-- This is expected behavior in high contention scenarios
-- Increase lock timeout in `DistributedLockService`
-- Reduce number of concurrent threads in tests
+- Ensure workflow instance exists for the entity
+- Check entity type and ID mapping
+- Verify workflow configuration
 
-## 📖 Advanced Topics
-
-### Customizing Cache Configuration
-
-Edit `RedisConfig.java` to modify cache behavior:
-
-```java
-@Bean
-public CacheManager cacheManager(RedisConnectionFactory connectionFactory) {
-    RedisCacheConfiguration config = RedisCacheConfiguration.defaultCacheConfig()
-            .entryTtl(Duration.ofMinutes(30)) // Increase TTL
-            .serializeKeysWith(/* custom serialization */)
-            .serializeValuesWith(/* custom serialization */);
-    
-    return RedisCacheManager.builder(connectionFactory)
-            .cacheDefaults(config)
-            .build();
-}
+### Issue 4: Task Dependencies Not Met
 ```
-
-### Customizing Lock Configuration
-
-Edit `RedisConfig.java` to modify lock behavior:
-
-```java
-@Bean
-public RedissonClient redissonClient() {
-    Config config = new Config();
-    config.useSingleServer()
-            .setAddress("redis://localhost:6379")
-            .setConnectionPoolSize(128) // Increase pool size
-            .setConnectTimeout(15000)   // Increase timeout
-            .setTimeout(5000);          // Increase operation timeout
-    
-    return Redisson.create(config);
-}
+Error: Task dependencies not satisfied
 ```
-
-### Adding Custom Metrics
-
-Add custom metrics to monitor application behavior:
-
-```java
-@Component
-public class FruitMetrics {
-    
-    private final MeterRegistry meterRegistry;
-    private final Counter cacheHits;
-    private final Counter cacheMisses;
-    
-    public FruitMetrics(MeterRegistry meterRegistry) {
-        this.meterRegistry = meterRegistry;
-        this.cacheHits = Counter.builder("fruit.cache.hits").register(meterRegistry);
-        this.cacheMisses = Counter.builder("fruit.cache.misses").register(meterRegistry);
-    }
-    
-    public void recordCacheHit() {
-        cacheHits.increment();
-    }
-    
-    public void recordCacheMiss() {
-        cacheMisses.increment();
-    }
-}
-```
+**Solution:**
+- Complete parent tasks first
+- Check task dependency configuration
+- Verify workflow step dependencies
 
 ## 🎯 Next Steps
 
-1. **Extend the Application**: Add more complex business logic
-2. **Add More Test Scenarios**: Create additional concurrency tests
-3. **Implement Monitoring**: Add metrics and health checks
-4. **Scale Testing**: Test with multiple application instances
-5. **Performance Tuning**: Optimize Redis and database configurations
+### Completed Phases ✅
+1. ✅ **Core Entities** - User, Role, Workflow, Task, Approval entities
+2. ✅ **User Management** - Authentication, authorization, role-based access
+3. ✅ **Workflow Configuration** - Configurable approval chains
+4. ✅ **Task Management** - Task assignment with dependencies
+5. ✅ **State Management** - Entity state transitions
+6. ✅ **JWT Authentication** - Secure token-based authentication
+7. ✅ **RBAC System** - Role-based access control
+8. ✅ **Dashboard APIs** - Personalized dashboards for all user types
 
-## 📚 Additional Resources
+### Upcoming Phases 🚧
+9. **Task Assignment Logic** - Advanced task assignment algorithms
+10. **Event-driven Notifications** - Real-time notifications for state changes
+11. **Audit Trail System** - Comprehensive audit logging
+12. **Seller Onboarding** - Complete seller registration workflow
+13. **Fruit Submission Workflow** - End-to-end fruit approval process
+14. **Frontend Implementation** - React/Vue.js frontend
+15. **Approver Dashboards** - Enhanced approver interfaces
+16. **Seller Application Tracking** - Real-time application status
+17. **Back Office Admin Panel** - Complete admin interface
+18. **Task Dependency Visualization** - Visual workflow representation
+19. **Testing & Documentation** - Comprehensive test coverage
 
-- [Spring Boot Cache Documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/io.html#io.caching)
-- [Redisson Documentation](https://github.com/redisson/redisson/wiki/Table-of-Content)
-- [Redis Documentation](https://redis.io/documentation)
-- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
-- [MongoDB Documentation](https://docs.mongodb.com/)
+## 📚 API Documentation
+
+### Authentication Endpoints
+- `POST /api/auth/login` - User login
+- `POST /api/auth/register` - User registration
+
+### User Management
+- `GET /api/users` - Get all users
+- `POST /api/users` - Create user
+- `GET /api/users/{id}` - Get user by ID
+- `PUT /api/users/{id}` - Update user
+
+### Workflow Management
+- `GET /api/workflows` - Get all workflows
+- `POST /api/workflows` - Create workflow
+- `GET /api/workflow-instances` - Get workflow instances
+- `POST /api/workflow-instances` - Create workflow instance
+
+### Task Management
+- `GET /api/tasks` - Get all tasks
+- `GET /api/tasks/assigned/{userId}` - Get user's tasks
+- `PUT /api/tasks/{taskId}/status` - Update task status
+
+### Dashboard APIs
+- `GET /api/dashboard` - Current user dashboard
+- `GET /api/dashboard/admin` - Admin dashboard
+- `GET /api/dashboard/seller` - Seller dashboard
+- `GET /api/dashboard/approver` - Approver dashboard
+
+### Fruit Workflow
+- `GET /api/fruits/workflow/draft` - Get draft fruits
+- `POST /api/fruits/workflow/{id}/submit` - Submit for approval
+- `GET /api/fruits/workflow/pending` - Get pending fruits
 
 ## 🤝 Contributing
 
-Feel free to extend this project with:
-- Additional test scenarios
-- More complex business logic
-- Performance optimizations
-- Documentation improvements
+This project demonstrates enterprise-level patterns and can be extended with:
 
-Happy Learning! 🚀
+- **Frontend Implementation** - React/Vue.js interfaces
+- **Advanced Workflows** - Complex approval scenarios
+- **Real-time Features** - WebSocket notifications
+- **Performance Optimization** - Caching strategies
+- **Monitoring** - Metrics and health checks
+- **Testing** - Comprehensive test coverage
+
+## 📖 Additional Resources
+
+- [Spring Boot Security Documentation](https://docs.spring.io/spring-boot/docs/current/reference/html/spring-boot-features.html#boot-features-security)
+- [JWT.io](https://jwt.io/) - JWT token debugging
+- [Spring Data JPA Documentation](https://docs.spring.io/spring-data/jpa/docs/current/reference/html/)
+- [PostgreSQL Documentation](https://www.postgresql.org/docs/)
+- [MongoDB Documentation](https://docs.mongodb.com/)
+- [Redis Documentation](https://redis.io/documentation)
+
+---
+
+**Happy Building! 🚀**
+
+*This project demonstrates a complete state management platform with enterprise-level features including JWT authentication, role-based access control, configurable workflows, and comprehensive task management.*
