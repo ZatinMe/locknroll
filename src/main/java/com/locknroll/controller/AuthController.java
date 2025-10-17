@@ -46,12 +46,12 @@ public class AuthController {
      */
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
-        logger.info("Login attempt for user: {}", loginRequest.getUsername());
+        logger.info("Login attempt for user: {}", loginRequest.getUsernameOrEmail());
         
         try {
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                    loginRequest.getUsername(),
+                    loginRequest.getUsernameOrEmail(),
                     loginRequest.getPassword()
                 )
             );
@@ -75,11 +75,11 @@ public class AuthController {
             response.setFullName(userPrincipal.getFullName());
             response.setRoles(roles);
 
-            logger.info("Successful login for user: {}", loginRequest.getUsername());
+            logger.info("Successful login for user: {}", loginRequest.getUsernameOrEmail());
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Login failed for user: {}", loginRequest.getUsername(), e);
+            logger.error("Login failed for user: {}", loginRequest.getUsernameOrEmail(), e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }

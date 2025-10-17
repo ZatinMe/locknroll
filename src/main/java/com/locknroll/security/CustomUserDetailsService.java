@@ -56,7 +56,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         @Override
         public Collection<? extends GrantedAuthority> getAuthorities() {
             return user.getRoles().stream()
-                    .map(role -> new SimpleGrantedAuthority("ROLE_" + role.getName()))
+                    .map(role -> {
+                        String roleName = role.getName();
+                        // If role name already ends with _ROLE, remove it to avoid duplication
+                        if (roleName.endsWith("_ROLE")) {
+                            roleName = roleName.substring(0, roleName.length() - 5);
+                        }
+                        return new SimpleGrantedAuthority("ROLE_" + roleName);
+                    })
                     .collect(Collectors.toList());
         }
 
