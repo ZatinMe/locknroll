@@ -70,7 +70,7 @@ public class TaskService {
         
         List<Task> createdTasks = workflowSteps.stream()
                 .map(step -> createTaskForStep(workflowInstance, step))
-                .collect(Collectors.toList());l
+                .collect(Collectors.toList());
         
         // Create task dependencies based on workflow step dependencies
         createTaskDependencies(createdTasks, workflowSteps);

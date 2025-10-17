@@ -36,6 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, 
                                     FilterChain filterChain) throws ServletException, IOException {
         try {
+            // Skip JWT processing for authentication endpoints and actuator endpoints
+            String requestPath = request.getRequestURI();
+            if (requestPath.startsWith("/api/auth/") || requestPath.startsWith("/actuator/")) {
+                filterChain.doFilter(request, response);
+                return;
+            }
+
             String jwt = getJwtFromRequest(request);
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {

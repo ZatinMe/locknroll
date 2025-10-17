@@ -21,6 +21,14 @@ public class JwtTokenProvider {
     private static final Logger logger = LoggerFactory.getLogger(JwtTokenProvider.class);
 
     @Value("${app.jwt.secret:mySecretKey}")
+    // This secret key should be set in application.yml/properties as 'app.jwt.secret'
+    // For production, use a strong secret key (at least 256 bits / 32 characters)
+    // You can generate a secure key using:
+    // 1. OpenSSL: openssl rand -base64 32
+    // 2. Java: java.security.SecureRandom
+    // 3. Online generators (not recommended for production)
+    // NEVER commit the actual secret key to version control
+    // Store it in environment variables or secure secret management systems
     private String jwtSecret;
 
     @Value("${app.jwt.expiration:86400000}") // 24 hours in milliseconds
