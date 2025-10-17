@@ -49,6 +49,7 @@ public class AuthController {
         logger.info("Login attempt for user: {}", loginRequest.getUsernameOrEmail());
         
         try {
+            logger.debug("Attempting authentication for user: {}", loginRequest.getUsernameOrEmail());
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
                     loginRequest.getUsernameOrEmail(),
@@ -56,6 +57,7 @@ public class AuthController {
                 )
             );
 
+            logger.debug("Authentication successful, generating JWT token");
             SecurityContextHolder.getContext().setAuthentication(authentication);
             String jwt = tokenProvider.generateToken(authentication);
 
@@ -65,6 +67,8 @@ public class AuthController {
             List<String> roles = userPrincipal.getAuthorities().stream()
                 .map(authority -> authority.getAuthority().replace("ROLE_", ""))
                 .collect(Collectors.toList());
+
+            logger.debug("User roles: {}", roles);
 
             LoginResponse response = new LoginResponse();
             response.setAccessToken(jwt);
@@ -79,8 +83,9 @@ public class AuthController {
             return ResponseEntity.ok(response);
             
         } catch (Exception e) {
-            logger.error("Login failed for user: {}", loginRequest.getUsernameOrEmail(), e);
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            logger.error("Login failed for user: {} - Error: {}", loginRequest.getUsernameOrEmail(), e.getMessage());
+            logger.debug("Full error:", e);
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(null);
         }
     }
 
