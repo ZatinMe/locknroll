@@ -18,7 +18,8 @@ public interface WorkflowStepRepository extends JpaRepository<WorkflowStep, Long
     /**
      * Find steps by workflow ID
      */
-    List<WorkflowStep> findByWorkflowIdOrderByStepOrder(Long workflowId);
+    @Query("SELECT ws FROM WorkflowStep ws WHERE ws.workflow.id = :workflowId ORDER BY ws.stepOrder")
+    List<WorkflowStep> findByWorkflowIdOrderByStepOrder(@Param("workflowId") Long workflowId);
     
     /**
      * Find step by workflow ID and step order

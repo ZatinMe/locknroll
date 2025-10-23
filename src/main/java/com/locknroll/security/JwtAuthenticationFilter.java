@@ -38,22 +38,32 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             // Skip JWT processing for authentication endpoints and actuator endpoints
             String requestPath = request.getRequestURI();
+            logger.debug("JWT Filter processing request: {}", requestPath);
+            
             if (requestPath.startsWith("/api/auth/") || requestPath.startsWith("/actuator/")) {
+                logger.debug("Skipping JWT processing for path: {}", requestPath);
                 filterChain.doFilter(request, response);
                 return;
             }
 
             String jwt = getJwtFromRequest(request);
+            logger.debug("JWT token found: {}", jwt != null ? "Yes" : "No");
 
             if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
                 String username = tokenProvider.getUsernameFromToken(jwt);
+                logger.debug("JWT token valid for user: {}", username);
 
                 UserDetails userDetails = customUserDetailsService.loadUserByUsername(username);
+                logger.debug("User details loaded, authorities: {}", userDetails.getAuthorities());
+                
                 UsernamePasswordAuthenticationToken authentication = 
                     new UsernamePasswordAuthenticationToken(userDetails, null, userDetails.getAuthorities());
                 authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
+                logger.debug("Authentication set in security context");
+            } else {
+                logger.debug("JWT token invalid or empty");
             }
         } catch (Exception ex) {
             logger.error("Could not set user authentication in security context", ex);

@@ -40,6 +40,9 @@ public class AuthController {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private CustomUserDetailsService customUserDetailsService;
 
     /**
      * User login endpoint
@@ -74,6 +77,7 @@ public class AuthController {
             response.setAccessToken(jwt);
             response.setTokenType("Bearer");
             response.setExpiresIn(tokenProvider.getExpirationInMs());
+            response.setId(userPrincipal.getId());
             response.setUsername(userPrincipal.getUsername());
             response.setEmail(userPrincipal.getEmail());
             response.setFullName(userPrincipal.getFullName());
@@ -165,6 +169,35 @@ public class AuthController {
         } catch (Exception e) {
             logger.error("Failed to refresh token", e);
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        }
+    }
+
+    /**
+     * Test authentication endpoint
+     */
+    @PostMapping("/test")
+    public ResponseEntity<String> testAuth(@RequestBody LoginRequest loginRequest) {
+        try {
+            logger.info("Testing authentication for user: {}", loginRequest.getUsernameOrEmail());
+            
+            // Test password encoding
+            String encodedPassword = userService.encodePassword(loginRequest.getPassword());
+            logger.info("Password encoded successfully");
+            
+            // Test user loading
+            CustomUserDetailsService.CustomUserPrincipal userPrincipal = 
+                (CustomUserDetailsService.CustomUserPrincipal) customUserDetailsService.loadUserByUsername(loginRequest.getUsernameOrEmail());
+            logger.info("User loaded successfully: {}", userPrincipal.getUsername());
+            
+            // Test password matching
+            boolean passwordMatches = userService.matchesPassword(loginRequest.getPassword(), userPrincipal.getPassword());
+            logger.info("Password matches: {}", passwordMatches);
+            
+            return ResponseEntity.ok("Authentication test successful - Password matches: " + passwordMatches);
+            
+        } catch (Exception e) {
+            logger.error("Authentication test failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Authentication test failed: " + e.getMessage());
         }
     }
 }

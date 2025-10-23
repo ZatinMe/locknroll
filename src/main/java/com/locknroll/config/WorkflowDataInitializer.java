@@ -160,11 +160,12 @@ public class WorkflowDataInitializer implements CommandLineRunner {
         step.setDescription(description);
         step.setStepType(stepType);
         step.setAssignedRole(assignedRole);
+        step.setAssignedRoleName(assignedRole.getName()); // Set the role name string for easier querying
         step.setIsRequired(isRequired);
         step.setIsActive(true);
         step.setCreatedBy("system");
         
         WorkflowStep savedStep = workflowStepRepository.save(step);
-        logger.info("Created workflow step: {} - {}", stepOrder, stepName);
+        logger.info("Created workflow step: {} - {} (Role: {})", stepOrder, stepName, assignedRole.getName());
     }
 }

@@ -21,7 +21,7 @@ public class WorkflowInstance extends BaseEntity {
     private Workflow workflow;
     
     @Column(name = "entity_id")
-    private Long entityId; // ID of the entity being processed (e.g., fruit ID)
+    private String entityId; // ID of the entity being processed (e.g., fruit ID)
     
     @Size(max = 50, message = "Entity type must not exceed 50 characters")
     @Column(name = "entity_type", length = 50)
@@ -60,7 +60,7 @@ public class WorkflowInstance extends BaseEntity {
     // Constructors
     public WorkflowInstance() {}
     
-    public WorkflowInstance(Workflow workflow, Long entityId, String entityType) {
+    public WorkflowInstance(Workflow workflow, String entityId, String entityType) {
         this.workflow = workflow;
         this.entityId = entityId;
         this.entityType = entityType;
@@ -77,11 +77,11 @@ public class WorkflowInstance extends BaseEntity {
         this.workflow = workflow;
     }
     
-    public Long getEntityId() {
+    public String getEntityId() {
         return entityId;
     }
     
-    public void setEntityId(Long entityId) {
+    public void setEntityId(String entityId) {
         this.entityId = entityId;
     }
     

@@ -1,7 +1,6 @@
 package com.locknroll.service;
 
 import com.locknroll.dto.TaskDto;
-import com.locknroll.dto.TaskDependencyDto;
 import com.locknroll.entity.Task;
 import com.locknroll.entity.TaskDependency;
 import com.locknroll.entity.WorkflowInstance;
@@ -13,8 +12,9 @@ import com.locknroll.repository.WorkflowInstanceRepository;
 import com.locknroll.repository.WorkflowStepRepository;
 import com.locknroll.repository.UserRepository;
 import com.locknroll.repository.RoleRepository;
+import com.locknroll.repository.TaskDependencyRepository;
+import com.locknroll.service.EventPublisher;
 import com.locknroll.exception.ResourceNotFoundException;
-import com.locknroll.exception.TaskAlreadyExistsException;
 import com.locknroll.exception.InvalidTaskStateException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -38,6 +38,9 @@ public class TaskService {
     
     @Autowired
     private TaskRepository taskRepository;
+
+    @Autowired
+    private CacheService cacheService;
     
     @Autowired
     private WorkflowInstanceRepository workflowInstanceRepository;
@@ -50,6 +53,15 @@ public class TaskService {
     
     @Autowired
     private RoleRepository roleRepository;
+    
+    @Autowired
+    private TaskDependencyRepository taskDependencyRepository;
+    
+    @Autowired
+    private NotificationService notificationService;
+    
+    @Autowired
+    private EventPublisher eventPublisher;
     
     /**
      * Create tasks for a workflow instance
@@ -103,6 +115,10 @@ public class TaskService {
         
         Task savedTask = taskRepository.save(task);
         logger.info("Created task: {} for user: {}", savedTask.getTitle(), assignedUser.getUsername());
+        
+        // Invalidate cache for the assigned user when new task is created
+        cacheService.evict("user:tasks:" + assignedUser.getId());
+        logger.info("Invalidated cache for user: {} after creating new task", assignedUser.getId());
         
         return savedTask;
     }
@@ -171,10 +187,27 @@ public class TaskService {
      */
     @Transactional(readOnly = true)
     public List<TaskDto> getTasksByUserId(Long userId) {
+        logger.info("Fetching tasks for user: {}", userId);
+        
+                // Try to get from cache first
+                Optional<List<TaskDto>> cachedTasks = cacheService.getCachedUserTasks(userId, 
+                    new com.fasterxml.jackson.core.type.TypeReference<List<TaskDto>>() {});
+        
+        if (cachedTasks.isPresent()) {
+            logger.debug("Returning cached tasks for user: {}", userId);
+            return cachedTasks.get();
+        }
+        
+        // If not in cache, fetch from database
         List<Task> tasks = taskRepository.findByAssignedToIdOrderByCreatedAt(userId);
-        return tasks.stream()
+        List<TaskDto> taskDtos = tasks.stream()
                 .map(this::convertToDto)
                 .collect(Collectors.toList());
+        
+        // Cache the result
+        cacheService.cacheUserTasks(userId, taskDtos);
+        
+        return taskDtos;
     }
     
     /**
@@ -231,6 +264,29 @@ public class TaskService {
         
         Task savedTask = taskRepository.save(task);
         
+        // Invalidate cache for the assigned user
+        cacheService.evict("user:tasks:" + savedTask.getAssignedTo().getId());
+        logger.info("Invalidated cache for user: {}", savedTask.getAssignedTo().getId());
+        
+        // Send notification to assigned user
+        String assignedUsername = savedTask.getAssignedTo().getUsername();
+        String message = String.format("Task '%s' status updated to %s", savedTask.getTitle(), status);
+        notificationService.sendTaskUpdateNotification(assignedUsername, savedTask.getTitle(), status, message);
+        
+        // CRITICAL: Update dependent tasks when parent task completes/rejects
+        if ("COMPLETED".equals(status) || "REJECTED".equals(status)) {
+            updateDependentTasks(savedTask);
+            
+            // Emit task completion event
+            eventPublisher.publishTaskCompleted(
+                savedTask.getId().toString(),
+                savedTask.getTitle(),
+                savedTask.getAssignedTo().getId().toString(),
+                assignedUsername,
+                status
+            );
+        }
+        
         // Check if all tasks in the workflow instance are completed
         checkWorkflowInstanceCompletion(savedTask.getWorkflowInstance().getId());
         
@@ -244,7 +300,7 @@ public class TaskService {
     private void validateStatusTransition(String currentStatus, String newStatus) {
         // Define valid status transitions
         switch (currentStatus) {
-            case "PENDING":
+            case "READY":
                 if (!"IN_PROGRESS".equals(newStatus) && !"CANCELLED".equals(newStatus)) {
                     throw new InvalidTaskStateException("Invalid status transition from " + currentStatus + " to " + newStatus);
                 }
@@ -261,6 +317,72 @@ public class TaskService {
             default:
                 throw new InvalidTaskStateException("Unknown status: " + currentStatus);
         }
+    }
+    
+    /**
+     * Update dependent tasks when parent task completes/rejects
+     */
+    private void updateDependentTasks(Task completedTask) {
+        logger.info("Updating dependent tasks for completed task: {}", completedTask.getId());
+        
+        // Find all tasks that depend on this completed task
+        List<TaskDependency> dependencies = taskDependencyRepository.findByParentTaskId(completedTask.getId());
+        
+        for (TaskDependency dependency : dependencies) {
+            Task dependentTask = dependency.getDependentTask();
+            
+            // Check if all dependencies for this dependent task are now satisfied
+            if (areAllDependenciesSatisfied(dependentTask)) {
+                // Update dependent task to READY state
+                dependentTask.setStatus("READY");
+                dependentTask.setUpdatedBy("system");
+                taskRepository.save(dependentTask);
+                
+                // Invalidate cache for the assigned user
+                cacheService.evict("user:tasks:" + dependentTask.getAssignedTo().getId());
+                
+                // Send notification to assigned user
+                String assignedUsername = dependentTask.getAssignedTo().getUsername();
+                String message = String.format("Task '%s' is now ready to start (dependencies satisfied)", dependentTask.getTitle());
+                notificationService.sendTaskUpdateNotification(assignedUsername, dependentTask.getTitle(), "READY", message);
+                
+                // Emit task ready event
+                eventPublisher.publishTaskCreated(
+                    dependentTask.getId().toString(),
+                    dependentTask.getTitle(),
+                    dependentTask.getAssignedTo().getId().toString(),
+                    assignedUsername,
+                    dependentTask.getWorkflowInstance().getId().toString()
+                );
+                
+                logger.info("Activated dependent task: {} - {}", dependentTask.getId(), dependentTask.getTitle());
+            } else {
+                // Task is still blocked by other dependencies
+                dependentTask.setStatus("BLOCKED");
+                dependentTask.setUpdatedBy("system");
+                taskRepository.save(dependentTask);
+                
+                // Invalidate cache for the assigned user
+                cacheService.evict("user:tasks:" + dependentTask.getAssignedTo().getId());
+                
+                logger.debug("Task {} is still blocked by other dependencies", dependentTask.getId());
+            }
+        }
+    }
+    
+    /**
+     * Check if all dependencies for a task are satisfied
+     */
+    private boolean areAllDependenciesSatisfied(Task task) {
+        List<TaskDependency> dependencies = taskDependencyRepository.findByDependentTaskId(task.getId());
+        
+        for (TaskDependency dependency : dependencies) {
+            Task parentTask = dependency.getParentTask();
+            if (!"COMPLETED".equals(parentTask.getStatus()) && !"APPROVED".equals(parentTask.getStatus())) {
+                return false;
+            }
+        }
+        return true;
     }
     
     /**

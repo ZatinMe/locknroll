@@ -39,6 +39,9 @@ public class DashboardService {
     private TaskRepository taskRepository;
 
     @Autowired
+    private CacheService cacheService;
+
+    @Autowired
     private WorkflowInstanceRepository workflowInstanceRepository;
 
     @Autowired
@@ -52,8 +55,20 @@ public class DashboardService {
         if (user == null) {
             throw new RuntimeException("User not authenticated");
         }
+        
+        logger.info("Dashboard requested for user: {} (ID: {})", user.getUsername(), user.getUserId());
+
+        // Try to get from cache first
+        Optional<DashboardDto> cachedDashboard = cacheService.getCachedDashboardData(user.getUserId(), DashboardDto.class);
+        if (cachedDashboard.isPresent()) {
+            logger.debug("Returning cached dashboard for user: {}", user.getUsername());
+            return cachedDashboard.get();
+        }
 
         DashboardDto dashboard = new DashboardDto();
+        Long userId = user.getUserId();
+        logger.info("Setting dashboard ID to: {}", userId);
+        dashboard.setId(userId);
         dashboard.setUsername(user.getUsername());
         dashboard.setFullName(user.getFullName());
         dashboard.setRoles(rbac.getUserRoles());
@@ -73,6 +88,9 @@ public class DashboardService {
             dashboard.setUserType("USER");
             populateUserDashboard(dashboard);
         }
+
+        // Cache the dashboard data
+        cacheService.cacheDashboardData(user.getUserId(), dashboard);
 
         return dashboard;
     }

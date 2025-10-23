@@ -1,21 +1,35 @@
-# LockN'Roll - State Management Platform
+# LockN'Roll - Enterprise State Management Platform
 
-A comprehensive Spring Boot application implementing a state management platform with configurable approval workflows, JWT authentication, and role-based access control for fruit management system.
+A sophisticated Spring Boot application implementing a complete **event-driven state management platform** with configurable approval workflows, JWT authentication, role-based access control, and real-time workflow orchestration for fruit management systems.
 
 ## 🎯 Project Overview
 
-This project demonstrates a complete state management platform with:
+This project demonstrates a **production-ready enterprise state management platform** with advanced workflow orchestration capabilities:
 
 - **🔐 JWT Authentication & Authorization** - Secure user authentication with role-based access control
-- **📋 Configurable Approval Workflows** - Multi-tier approval processes with dependencies
-- **👥 User Management** - Role-based user system (Admin, BackOffice, Seller, Approvers)
-- **📊 Dashboard APIs** - Personalized dashboards for different user personas
-- **🔄 Task Management** - Task assignment with dependency tracking
-- **📈 State Management** - Entity state transitions with audit trails
+- **📋 Event-Driven Workflow Orchestration** - Real-time workflow progression with automatic dependency resolution
+- **👥 Multi-Persona User Management** - Role-based user system (Admin, BackOffice, Seller, Approvers)
+- **📊 Real-Time Dashboards** - Personalized dashboards with live updates via WebSocket
+- **🔄 Advanced Task Management** - Task assignment with complex dependency tracking and automatic progression
+- **📈 State Management** - Entity state transitions with comprehensive audit trails
 - **🗄️ Multi-Database Architecture** - PostgreSQL for entities, MongoDB for transactions, Redis for caching
+- **⚡ Real-Time Notifications** - WebSocket-based notifications for workflow events
+- **🎭 React Frontend** - Modern React application with Material-UI components
 
 ## 🏗️ Architecture
 
+### Event-Driven Architecture
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Event-Driven Workflow Engine                │
+├─────────────────────────────────────────────────────────────────┤
+│  Task Completion → Event Publisher → Kafka → Event Listener    │
+│       ↓                ↓              ↓           ↓           │
+│  Update Dependencies → Notify Users → Update Cache → Dashboard │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Multi-Database Architecture
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Spring Boot   │    │      Redis      │    │   PostgreSQL    │
@@ -27,7 +41,13 @@ This project demonstrates a complete state management platform with:
          ▼                       ▼                       ▼
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   REST API      │    │   JWT Tokens    │    │   MongoDB       │
-│   Endpoints     │    │   & Security    │    │   (Transactions)│
+│   + WebSocket   │    │   & Security    │    │   (Transactions)│
+└─────────────────┘    └─────────────────┘    └─────────────────┘
+         │                       │                       │
+         ▼                       ▼                       ▼
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│   React Frontend │    │   Kafka Events  │    │   Event Store   │
+│   (Material-UI)  │    │   (Orchestration)│   │   (Audit Trail) │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -35,36 +55,38 @@ This project demonstrates a complete state management platform with:
 
 ### Prerequisites
 
-- Java 17+
-- Maven 3.6+
-- PostgreSQL 13+
-- MongoDB 4.4+
-- Redis 6.0+
+- **Java 17+** - OpenJDK or Oracle JDK
+- **Maven 3.6+** - Build tool
+- **PostgreSQL 13+** - Primary database
+- **MongoDB 4.4+** - Transaction store
+- **Redis 6.0+** - Caching and sessions
+- **Node.js 16+** - Frontend development
+- **Kafka** (Optional) - Event streaming
 
 ### 1. Database Setup
 
 #### PostgreSQL Setup
 ```bash
-# Create database
+# Create databases
 createdb locknroll_db
-
-# Create test database
 createdb locknroll_test_db
+
+# Verify connection
+psql -U postgres -c "SELECT version();"
 ```
 
 #### MongoDB Setup
 ```bash
 # MongoDB will create databases automatically
-# No manual setup required
+# Verify connection
+mongosh --eval "db.runCommand('ping')"
 ```
 
 #### Redis Setup
 ```bash
 # Install Redis (macOS)
 brew install redis
-
-# Start Redis
-redis-server
+brew services start redis
 
 # Verify Redis is running
 redis-cli ping
@@ -86,30 +108,45 @@ mvn spring-boot:run
 
 The application will start on `http://localhost:8080`
 
-### 3. Verify Setup
+### 3. Frontend Setup
 
 ```bash
-# Check if all services are running
+# Navigate to frontend directory
+cd frontend
+
+# Install dependencies
+npm install
+
+# Start development server
+npm start
+```
+
+The frontend will start on `http://localhost:3000`
+
+### 4. Verify Setup
+
+```bash
+# Check application health
 curl http://localhost:8080/actuator/health
 
-# Get all fruits (should return sample data)
-curl http://localhost:8080/api/fruits
+# Test authentication
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"usernameOrEmail": "admin", "password": "password123"}'
 ```
 
 ## 🔐 Authentication & Authorization
 
 ### Default Users
 
-The application initializes with the following default users:
-
 | Username | Password | Role | Description |
 |----------|----------|------|-------------|
-| `admin` | `admin123` | ADMIN_ROLE | System administrator |
-| `backoffice` | `backoffice123` | BACKOFFICE_ROLE | Back office operations |
-| `seller1` | `seller123` | SELLER_ROLE | Fruit seller |
-| `finance1` | `finance123` | FINANCE_APPROVER_ROLE | Finance approver |
-| `quality1` | `quality123` | QUALITY_APPROVER_ROLE | Quality approver |
-| `manager1` | `manager123` | MANAGER_APPROVER_ROLE | Manager approver |
+| `admin` | `password123` | ADMIN_ROLE | System administrator |
+| `backoffice` | `password123` | BACKOFFICE_ROLE | Back office operations |
+| `seller1` | `password123` | SELLER_ROLE | Fruit seller |
+| `finance1` | `password123` | FINANCE_APPROVER_ROLE | Finance approver |
+| `quality1` | `password123` | QUALITY_APPROVER_ROLE | Quality approver |
+| `manager1` | `password123` | MANAGER_APPROVER_ROLE | Manager approver |
 
 ### Authentication Flow
 
@@ -117,11 +154,90 @@ The application initializes with the following default users:
 # 1. Login to get JWT token
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"usernameOrEmail": "seller1", "password": "seller123"}'
+  -d '{"usernameOrEmail": "admin", "password": "password123"}'
 
 # 2. Use token in subsequent requests
 curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   http://localhost:8080/api/dashboard
+```
+
+## 🎭 User Personas & Dashboards
+
+### 1. Admin/BackOffice Dashboard
+- **Overview**: System-wide statistics and management
+- **Features**: 
+  - All pending tasks across the system
+  - Active workflow instances with real-time updates
+  - User management and role assignment
+  - System statistics and performance metrics
+  - Event monitoring and audit trails
+
+### 2. Seller Dashboard
+- **Overview**: Personal fruit management and tracking
+- **Features**:
+  - My submitted fruits with real-time status updates
+  - Application status tracking with dependency visualization
+  - Fruit status counts (Draft, Pending, Approved, Rejected)
+  - Task notifications and workflow progression
+
+### 3. Approver Dashboard
+- **Overview**: Task management and approval workflow
+- **Features**:
+  - Assigned tasks with dependency information
+  - Pending approvals with priority indicators
+  - Workflow instance tracking with real-time updates
+  - Approval history and audit trails
+
+## 🔄 Event-Driven Workflow System
+
+### Workflow Orchestration
+
+The system features **sophisticated event-driven workflow orchestration**:
+
+- **Automatic Progression**: Tasks automatically progress when dependencies are satisfied
+- **Real-Time Updates**: Users receive immediate notifications when tasks become available
+- **Dependency Resolution**: Complex multi-level dependencies are handled automatically
+- **Failure Handling**: Critical rejections trigger workflow cancellation with proper cleanup
+
+### Workflow States
+
+| State | Description |
+|-------|-------------|
+| `DRAFT` | Initial state, not submitted |
+| `PENDING_APPROVAL` | Submitted, awaiting approval |
+| `IN_PROGRESS` | Workflow in progress |
+| `APPROVED` | All approvals completed |
+| `REJECTED` | Rejected at any stage |
+| `CANCELLED` | Workflow cancelled |
+
+### Task States
+
+| State | Description |
+|-------|-------------|
+| `PENDING` | Task created, not started |
+| `READY` | Dependencies satisfied, ready to start |
+| `IN_PROGRESS` | Task being worked on |
+| `COMPLETED` | Task completed successfully |
+| `REJECTED` | Task rejected |
+| `BLOCKED` | Task blocked by dependencies |
+| `CANCELLED` | Task cancelled |
+
+### Event-Driven Flow
+
+```
+Task A (Finance) → COMPLETED
+       ↓
+   [Event Published to Kafka]
+       ↓
+   [WorkflowEventListener processes event]
+       ↓
+   [updateDependentTasksFromEvent() called]
+       ↓
+Task B (Quality) → READY (dependencies satisfied)
+       ↓
+   [User notified via WebSocket]
+       ↓
+   [Dashboard updated in real-time]
 ```
 
 ## 📋 Core Features
@@ -169,12 +285,20 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
 - `GET /api/tasks` - Get all tasks
 - `GET /api/tasks/assigned/{userId}` - Get tasks assigned to user
 - `PUT /api/tasks/{taskId}/status` - Update task status
+- `GET /api/tasks/ready/{workflowInstanceId}` - Get ready tasks
+- `GET /api/tasks/blocked/{workflowInstanceId}` - Get blocked tasks
 
 **Example:**
 ```bash
 # Get tasks assigned to current user
 curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   http://localhost:8080/api/tasks/assigned/1
+
+# Update task status (triggers event-driven workflow progression)
+curl -X PUT http://localhost:8080/api/tasks/1/status \
+  -H "Authorization: Bearer YOUR_JWT_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{"status": "COMPLETED", "comments": "Task completed successfully"}'
 ```
 
 ### 4. Fruit Workflow Integration
@@ -208,61 +332,12 @@ curl -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   http://localhost:8080/api/dashboard/seller
 ```
 
-## 🎭 User Personas & Dashboards
+### 6. Real-Time Notifications
 
-### 1. Admin/BackOffice Dashboard
-- **Overview**: System-wide statistics and management
-- **Features**: 
-  - All pending tasks across the system
-  - Active workflow instances
-  - User management
-  - System statistics
-
-### 2. Seller Dashboard
-- **Overview**: Personal fruit management and tracking
-- **Features**:
-  - My submitted fruits
-  - Application status tracking
-  - Fruit status counts (Draft, Pending, Approved, Rejected)
-
-### 3. Approver Dashboard
-- **Overview**: Task management and approval workflow
-- **Features**:
-  - Assigned tasks
-  - Pending approvals
-  - Workflow instance tracking
-
-## 🔄 Workflow System
-
-### Workflow Configuration
-
-The system supports configurable approval workflows with:
-
-- **Multi-tier Approvals**: Finance → Quality → Manager
-- **Dependencies**: Parent tasks must complete before dependent tasks
-- **Role-based Assignment**: Tasks assigned to specific roles
-- **Conditional Logic**: Support for different approval paths
-
-### Workflow States
-
-| State | Description |
-|-------|-------------|
-| `DRAFT` | Initial state, not submitted |
-| `PENDING_APPROVAL` | Submitted, awaiting approval |
-| `IN_PROGRESS` | Workflow in progress |
-| `APPROVED` | All approvals completed |
-| `REJECTED` | Rejected at any stage |
-| `CANCELLED` | Workflow cancelled |
-
-### Task States
-
-| State | Description |
-|-------|-------------|
-| `PENDING` | Task created, not started |
-| `IN_PROGRESS` | Task being worked on |
-| `COMPLETED` | Task completed successfully |
-| `REJECTED` | Task rejected |
-| `CANCELLED` | Task cancelled |
+**WebSocket Endpoints:**
+- `/ws/notifications/{username}` - User-specific notifications
+- `/ws/notifications/role/{role}` - Role-based notifications
+- `/ws/notifications/broadcast` - System-wide notifications
 
 ## 🧪 Testing the System
 
@@ -272,7 +347,7 @@ The system supports configurable approval workflows with:
 # 1. Login as seller
 SELLER_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"usernameOrEmail": "seller1", "password": "seller123"}' | \
+  -d '{"usernameOrEmail": "seller1", "password": "password123"}' | \
   jq -r '.accessToken')
 
 # 2. Submit fruit for approval
@@ -284,18 +359,22 @@ curl -X POST http://localhost:8080/api/fruits/workflow/1/submit \
 # 3. Login as finance approver
 FINANCE_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"usernameOrEmail": "finance1", "password": "finance123"}' | \
+  -d '{"usernameOrEmail": "finance1", "password": "password123"}' | \
   jq -r '.accessToken')
 
 # 4. Get assigned tasks
 curl -H "Authorization: Bearer $FINANCE_TOKEN" \
   http://localhost:8080/api/tasks/assigned/4
 
-# 5. Approve task
+# 5. Approve task (triggers event-driven workflow progression)
 curl -X PUT http://localhost:8080/api/tasks/1/status \
   -H "Authorization: Bearer $FINANCE_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"status": "COMPLETED", "comments": "Finance approval completed"}'
+
+# 6. Check that dependent tasks are now ready
+curl -H "Authorization: Bearer $FINANCE_TOKEN" \
+  http://localhost:8080/api/tasks/ready/1
 ```
 
 ### 2. Dashboard Testing
@@ -311,7 +390,7 @@ curl -H "Authorization: Bearer $FINANCE_TOKEN" \
 # Admin dashboard (requires admin token)
 ADMIN_TOKEN=$(curl -s -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
-  -d '{"usernameOrEmail": "admin", "password": "admin123"}' | \
+  -d '{"usernameOrEmail": "admin", "password": "password123"}' | \
   jq -r '.accessToken')
 
 curl -H "Authorization: Bearer $ADMIN_TOKEN" \
@@ -347,12 +426,13 @@ curl -H "Authorization: Bearer $ADMIN_TOKEN" \
 
 ```bash
 # View application logs
-tail -f logs/application.log
+tail -f logs/redis-learning.log
 
 # Filter for specific operations
-grep "Workflow" logs/application.log
-grep "Task" logs/application.log
-grep "Authentication" logs/application.log
+grep "Event-driven" logs/redis-learning.log
+grep "Workflow" logs/redis-learning.log
+grep "Task" logs/redis-learning.log
+grep "Authentication" logs/redis-learning.log
 ```
 
 ### Database Queries
@@ -363,13 +443,19 @@ grep "Authentication" logs/application.log
 SELECT * FROM workflow_instances ORDER BY created_at DESC;
 
 -- Check tasks by status
-SELECT * FROM tasks WHERE status = 'PENDING';
+SELECT * FROM tasks WHERE status = 'READY';
 
 -- Check user roles
 SELECT u.username, r.name as role 
 FROM users u 
 JOIN user_roles ur ON u.id = ur.user_id 
 JOIN roles r ON ur.role_id = r.id;
+
+-- Check task dependencies
+SELECT t.title, td.parent_task_id, pt.title as parent_title
+FROM tasks t
+JOIN task_dependencies td ON t.id = td.dependent_task_id
+JOIN tasks pt ON td.parent_task_id = pt.id;
 ```
 
 **MongoDB:**
@@ -408,7 +494,7 @@ Error: 401 Unauthorized
 **Solution:**
 - Ensure JWT token is included in Authorization header
 - Check if token has expired
-- Verify user credentials
+- Verify user credentials (use `password123` not `admin123`)
 
 ### Issue 2: Permission Denied
 ```
@@ -419,16 +505,7 @@ Error: 403 Forbidden
 - Ensure user has required role for the operation
 - Verify workflow step assignments
 
-### Issue 3: Workflow Instance Not Found
-```
-Error: Workflow instance not found
-```
-**Solution:**
-- Ensure workflow instance exists for the entity
-- Check entity type and ID mapping
-- Verify workflow configuration
-
-### Issue 4: Task Dependencies Not Met
+### Issue 3: Task Dependencies Not Met
 ```
 Error: Task dependencies not satisfied
 ```
@@ -437,30 +514,43 @@ Error: Task dependencies not satisfied
 - Check task dependency configuration
 - Verify workflow step dependencies
 
-## 🎯 Next Steps
+### Issue 4: Event Processing Issues
+```
+Error: Event listener not processing events
+```
+**Solution:**
+- Check Kafka configuration
+- Verify event publisher is working
+- Check application logs for event processing errors
 
-### Completed Phases ✅
-1. ✅ **Core Entities** - User, Role, Workflow, Task, Approval entities
-2. ✅ **User Management** - Authentication, authorization, role-based access
-3. ✅ **Workflow Configuration** - Configurable approval chains
-4. ✅ **Task Management** - Task assignment with dependencies
-5. ✅ **State Management** - Entity state transitions
-6. ✅ **JWT Authentication** - Secure token-based authentication
-7. ✅ **RBAC System** - Role-based access control
-8. ✅ **Dashboard APIs** - Personalized dashboards for all user types
+## 🎯 Project Status
 
-### Upcoming Phases 🚧
-9. **Task Assignment Logic** - Advanced task assignment algorithms
-10. **Event-driven Notifications** - Real-time notifications for state changes
-11. **Audit Trail System** - Comprehensive audit logging
-12. **Seller Onboarding** - Complete seller registration workflow
-13. **Fruit Submission Workflow** - End-to-end fruit approval process
-14. **Frontend Implementation** - React/Vue.js frontend
-15. **Approver Dashboards** - Enhanced approver interfaces
-16. **Seller Application Tracking** - Real-time application status
-17. **Back Office Admin Panel** - Complete admin interface
-18. **Task Dependency Visualization** - Visual workflow representation
-19. **Testing & Documentation** - Comprehensive test coverage
+### ✅ Completed Features
+
+1. **✅ Core Entities** - User, Role, Workflow, Task, Approval entities
+2. **✅ User Management** - Authentication, authorization, role-based access
+3. **✅ Workflow Configuration** - Configurable approval chains
+4. **✅ Task Management** - Task assignment with dependencies
+5. **✅ State Management** - Entity state transitions
+6. **✅ JWT Authentication** - Secure token-based authentication
+7. **✅ RBAC System** - Role-based access control
+8. **✅ Dashboard APIs** - Personalized dashboards for all user types
+9. **✅ Event-Driven Architecture** - Real-time workflow orchestration
+10. **✅ Dependency Resolution** - Automatic task progression
+11. **✅ Real-Time Notifications** - WebSocket-based notifications
+12. **✅ React Frontend** - Modern UI with Material-UI
+13. **✅ Multi-Database Architecture** - PostgreSQL, MongoDB, Redis
+14. **✅ Caching System** - Redis-based caching
+15. **✅ Audit Trail** - Comprehensive logging and event tracking
+
+### 🚧 Optional Enhancements
+
+- **Advanced Analytics** - Workflow performance metrics
+- **Mobile App** - React Native mobile application
+- **API Documentation** - Swagger/OpenAPI documentation
+- **Load Testing** - Performance testing suite
+- **Docker Deployment** - Containerized deployment
+- **CI/CD Pipeline** - Automated testing and deployment
 
 ## 📚 API Documentation
 
@@ -484,6 +574,8 @@ Error: Task dependencies not satisfied
 - `GET /api/tasks` - Get all tasks
 - `GET /api/tasks/assigned/{userId}` - Get user's tasks
 - `PUT /api/tasks/{taskId}/status` - Update task status
+- `GET /api/tasks/ready/{workflowInstanceId}` - Get ready tasks
+- `GET /api/tasks/blocked/{workflowInstanceId}` - Get blocked tasks
 
 ### Dashboard APIs
 - `GET /api/dashboard` - Current user dashboard
@@ -496,16 +588,20 @@ Error: Task dependencies not satisfied
 - `POST /api/fruits/workflow/{id}/submit` - Submit for approval
 - `GET /api/fruits/workflow/pending` - Get pending fruits
 
+### WebSocket Endpoints
+- `/ws/notifications/{username}` - User notifications
+- `/ws/notifications/role/{role}` - Role notifications
+- `/ws/notifications/broadcast` - System notifications
+
 ## 🤝 Contributing
 
 This project demonstrates enterprise-level patterns and can be extended with:
 
-- **Frontend Implementation** - React/Vue.js interfaces
 - **Advanced Workflows** - Complex approval scenarios
-- **Real-time Features** - WebSocket notifications
-- **Performance Optimization** - Caching strategies
+- **Performance Optimization** - Caching strategies and database optimization
 - **Monitoring** - Metrics and health checks
 - **Testing** - Comprehensive test coverage
+- **Documentation** - API documentation and user guides
 
 ## 📖 Additional Resources
 
@@ -515,9 +611,11 @@ This project demonstrates enterprise-level patterns and can be extended with:
 - [PostgreSQL Documentation](https://www.postgresql.org/docs/)
 - [MongoDB Documentation](https://docs.mongodb.com/)
 - [Redis Documentation](https://redis.io/documentation)
+- [React Documentation](https://reactjs.org/docs/)
+- [Material-UI Documentation](https://mui.com/)
 
 ---
 
 **Happy Building! 🚀**
 
-*This project demonstrates a complete state management platform with enterprise-level features including JWT authentication, role-based access control, configurable workflows, and comprehensive task management.*
+*This project demonstrates a complete enterprise state management platform with event-driven workflow orchestration, real-time notifications, and sophisticated dependency resolution - showcasing advanced Spring Boot development patterns and modern web technologies.*

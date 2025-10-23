@@ -18,7 +18,7 @@ public interface WorkflowInstanceRepository extends JpaRepository<WorkflowInstan
     /**
      * Find workflow instances by entity type and entity ID
      */
-    Optional<WorkflowInstance> findByEntityTypeAndEntityId(String entityType, Long entityId);
+    Optional<WorkflowInstance> findByEntityTypeAndEntityId(String entityType, String entityId);
     
     /**
      * Find workflow instances by workflow ID
@@ -63,4 +63,9 @@ public interface WorkflowInstanceRepository extends JpaRepository<WorkflowInstan
      * Find workflow instances by entity type and status
      */
     List<WorkflowInstance> findByEntityTypeAndStatusOrderByCreatedAt(String entityType, String status);
+    
+    /**
+     * Find workflow instances by workflow ID and status
+     */
+    List<WorkflowInstance> findByWorkflowIdAndStatus(Long workflowId, String status);
 }

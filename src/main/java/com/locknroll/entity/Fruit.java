@@ -55,9 +55,8 @@ public class Fruit extends BaseEntity {
     @Column(name = "rejection_reason", length = 1000)
     private String rejectionReason;
     
-    // One-to-many relationship with workflow instances
-    @OneToMany(mappedBy = "entityId", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<WorkflowInstance> workflowInstances = new ArrayList<>();
+    // Note: Workflow instances are managed separately through the WorkflowInstanceService
+    // based on entity type "FRUIT" and this fruit's ID as a string
     
     // Constructors
     public Fruit() {}
@@ -162,13 +161,6 @@ public class Fruit extends BaseEntity {
         this.rejectionReason = rejectionReason;
     }
     
-    public List<WorkflowInstance> getWorkflowInstances() {
-        return workflowInstances;
-    }
-    
-    public void setWorkflowInstances(List<WorkflowInstance> workflowInstances) {
-        this.workflowInstances = workflowInstances;
-    }
     
     // Helper methods
     public boolean isDraft() {
@@ -212,13 +204,6 @@ public class Fruit extends BaseEntity {
         this.status = "ACTIVE";
     }
     
-    public void addWorkflowInstance(WorkflowInstance workflowInstance) {
-        workflowInstances.add(workflowInstance);
-    }
-    
-    public void removeWorkflowInstance(WorkflowInstance workflowInstance) {
-        workflowInstances.remove(workflowInstance);
-    }
     
     @Override
     public String toString() {

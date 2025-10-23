@@ -20,7 +20,7 @@ public class WorkflowInstanceDto {
     private String entityType; // e.g., "FRUIT", "SELLER", "ORDER"
     
     @NotNull(message = "Entity ID is required")
-    private Long entityId; // ID of the entity being processed
+    private String entityId; // ID of the entity being processed
     
     @NotBlank(message = "Status is required")
     @Size(max = 50, message = "Status must not exceed 50 characters")
@@ -43,7 +43,7 @@ public class WorkflowInstanceDto {
     // Constructors
     public WorkflowInstanceDto() {}
     
-    public WorkflowInstanceDto(Long workflowId, String entityType, Long entityId, String status) {
+    public WorkflowInstanceDto(Long workflowId, String entityType, String entityId, String status) {
         this.workflowId = workflowId;
         this.entityType = entityType;
         this.entityId = entityId;
@@ -75,11 +75,11 @@ public class WorkflowInstanceDto {
         this.entityType = entityType;
     }
     
-    public Long getEntityId() {
+    public String getEntityId() {
         return entityId;
     }
     
-    public void setEntityId(Long entityId) {
+    public void setEntityId(String entityId) {
         this.entityId = entityId;
     }
     

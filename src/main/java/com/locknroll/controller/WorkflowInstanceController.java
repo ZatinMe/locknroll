@@ -78,7 +78,7 @@ public class WorkflowInstanceController {
      * Get workflow instance by entity type and entity ID
      */
     @GetMapping("/entity/{entityType}/{entityId}")
-    public ResponseEntity<WorkflowInstanceDto> getWorkflowInstanceByEntity(@PathVariable String entityType, @PathVariable Long entityId) {
+    public ResponseEntity<WorkflowInstanceDto> getWorkflowInstanceByEntity(@PathVariable String entityType, @PathVariable String entityId) {
         try {
             WorkflowInstanceDto workflowInstance = workflowInstanceService.getWorkflowInstanceByEntity(entityType, entityId);
             return ResponseEntity.ok(workflowInstance);

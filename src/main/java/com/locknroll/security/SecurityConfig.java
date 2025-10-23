@@ -48,8 +48,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration authConfig) throws Exception {
-        return authConfig.getAuthenticationManager();
+    public AuthenticationManager authenticationManager() throws Exception {
+        return new org.springframework.security.authentication.ProviderManager(authenticationProvider());
     }
 
     @Bean
@@ -60,7 +60,7 @@ public class SecurityConfig {
             .anonymous(anonymous -> anonymous.disable())
             .authorizeHttpRequests(authz -> authz
                 // Public endpoints - must come first
-                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/test").permitAll()
                 .requestMatchers("/actuator/health", "/actuator/info").permitAll()
                 .requestMatchers("/error").permitAll()
                 
@@ -82,7 +82,6 @@ public class SecurityConfig {
                 // All other requests need authentication
                 .anyRequest().authenticated()
             )
-            .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

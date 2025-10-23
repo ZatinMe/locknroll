@@ -10,6 +10,7 @@ public class LoginResponse {
     private String accessToken;
     private String tokenType;
     private long expiresIn;
+    private Long id;
     private String username;
     private String email;
     private String fullName;
@@ -41,6 +42,14 @@ public class LoginResponse {
 
     public void setExpiresIn(long expiresIn) {
         this.expiresIn = expiresIn;
+    }
+
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
     }
 
     public String getUsername() {

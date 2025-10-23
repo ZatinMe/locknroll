@@ -85,7 +85,7 @@ public class WorkflowInstanceService {
      * Get workflow instance by entity type and entity ID
      */
     @Transactional(readOnly = true)
-    public WorkflowInstanceDto getWorkflowInstanceByEntity(String entityType, Long entityId) {
+    public WorkflowInstanceDto getWorkflowInstanceByEntity(String entityType, String entityId) {
         WorkflowInstance workflowInstance = workflowInstanceRepository
                 .findByEntityTypeAndEntityId(entityType, entityId)
                 .orElseThrow(() -> new ResourceNotFoundException(

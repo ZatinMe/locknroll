@@ -44,6 +44,10 @@ public class WorkflowStep extends BaseEntity {
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
     
+    // Role assignment for this step
+    @Column(name = "assigned_role_name", length = 50)
+    private String assignedRoleName; // Role name that can execute this step
+    
     // Many-to-one relationship with workflow
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "workflow_id", nullable = false)
@@ -53,6 +57,11 @@ public class WorkflowStep extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "assigned_role_id")
     private Role assignedRole;
+
+    // Many-to-one relationship with parallel processing group
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parallel_processing_group_id")
+    private ParallelProcessingGroup parallelProcessingGroup;
     
     // One-to-many relationship with dependent steps
     @OneToMany(mappedBy = "parentStep", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -135,6 +144,22 @@ public class WorkflowStep extends BaseEntity {
     
     public void setIsActive(Boolean isActive) {
         this.isActive = isActive;
+    }
+    
+    public String getAssignedRoleName() {
+        return assignedRoleName;
+    }
+    
+    public void setAssignedRoleName(String assignedRoleName) {
+        this.assignedRoleName = assignedRoleName;
+    }
+
+    public ParallelProcessingGroup getParallelProcessingGroup() {
+        return parallelProcessingGroup;
+    }
+
+    public void setParallelProcessingGroup(ParallelProcessingGroup parallelProcessingGroup) {
+        this.parallelProcessingGroup = parallelProcessingGroup;
     }
     
     public Workflow getWorkflow() {

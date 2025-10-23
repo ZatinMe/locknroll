@@ -64,7 +64,7 @@ public class FruitWorkflowService {
         WorkflowInstanceDto workflowInstanceDto = new WorkflowInstanceDto();
         workflowInstanceDto.setWorkflowId(fruitWorkflow.getId());
         workflowInstanceDto.setEntityType("FRUIT");
-        workflowInstanceDto.setEntityId(fruitId);
+        workflowInstanceDto.setEntityId(fruitId.toString());
         workflowInstanceDto.setStatus("PENDING");
         
         WorkflowInstanceDto createdInstance = workflowInstanceService.createWorkflowInstance(workflowInstanceDto);
@@ -103,7 +103,7 @@ public class FruitWorkflowService {
         }
         
         // Get the workflow instance for this fruit
-        WorkflowInstanceDto workflowInstance = workflowInstanceService.getWorkflowInstanceByEntity("FRUIT", fruitId);
+        WorkflowInstanceDto workflowInstance = workflowInstanceService.getWorkflowInstanceByEntity("FRUIT", fruitId.toString());
         
         // Update workflow instance status to completed
         workflowInstanceService.updateWorkflowInstanceStatus(workflowInstance.getId(), "COMPLETED");
@@ -136,7 +136,7 @@ public class FruitWorkflowService {
         }
         
         // Get the workflow instance for this fruit
-        WorkflowInstanceDto workflowInstance = workflowInstanceService.getWorkflowInstanceByEntity("FRUIT", fruitId);
+        WorkflowInstanceDto workflowInstance = workflowInstanceService.getWorkflowInstanceByEntity("FRUIT", fruitId.toString());
         
         // Update workflow instance status to rejected
         workflowInstanceService.updateWorkflowInstanceStatus(workflowInstance.getId(), "REJECTED");
@@ -199,7 +199,7 @@ public class FruitWorkflowService {
      */
     @Transactional(readOnly = true)
     public WorkflowInstanceDto getFruitWorkflowInstance(Long fruitId) {
-        return workflowInstanceService.getWorkflowInstanceByEntity("FRUIT", fruitId);
+        return workflowInstanceService.getWorkflowInstanceByEntity("FRUIT", fruitId.toString());
     }
     
     /**

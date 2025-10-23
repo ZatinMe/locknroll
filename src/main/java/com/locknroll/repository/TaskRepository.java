@@ -1,6 +1,7 @@
 package com.locknroll.repository;
 
 import com.locknroll.entity.Task;
+import com.locknroll.entity.TaskDependency;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -98,4 +99,26 @@ public interface TaskRepository extends JpaRepository<Task, Long> {
     @Query("SELECT t FROM Task t WHERE t.workflowInstance.id = :workflowInstanceId AND t.status = 'PENDING' AND " +
            "EXISTS (SELECT 1 FROM TaskDependency td WHERE td.dependentTask.id = t.id AND td.parentTask.status != 'COMPLETED')")
     List<Task> findBlockedTasks(@Param("workflowInstanceId") Long workflowInstanceId);
+    
+    /**
+     * Find tasks by workflow instance ID
+     */
+    List<Task> findByWorkflowInstanceId(Long workflowInstanceId);
+    
+    /**
+     * Find tasks by workflow instance ID and step name
+     */
+    @Query("SELECT t FROM Task t WHERE t.workflowInstance.id = :workflowInstanceId AND t.workflowStep.name = :stepName")
+    List<Task> findByWorkflowInstanceIdAndStepName(@Param("workflowInstanceId") Long workflowInstanceId, @Param("stepName") String stepName);
+    
+    /**
+     * Find tasks by workflow instance ID and status
+     */
+    List<Task> findByWorkflowInstanceIdAndStatus(Long workflowInstanceId, String status);
+    
+    /**
+     * Find task dependencies by dependent task ID
+     */
+    @Query("SELECT td FROM TaskDependency td WHERE td.dependentTask.id = :taskId")
+    List<TaskDependency> findByDependentTaskId(@Param("taskId") Long taskId);
 }

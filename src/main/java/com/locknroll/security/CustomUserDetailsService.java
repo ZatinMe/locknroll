@@ -33,9 +33,9 @@ public class CustomUserDetailsService implements UserDetailsService {
     public UserDetails loadUserByUsername(String usernameOrEmail) throws UsernameNotFoundException {
         logger.debug("Loading user details for usernameOrEmail: {}", usernameOrEmail);
         
-        // Try to find by username first, then by email
-        User user = userRepository.findByUsername(usernameOrEmail)
-                .or(() -> userRepository.findByEmail(usernameOrEmail))
+        // Try to find by username first, then by email (with roles eagerly fetched)
+        User user = userRepository.findByUsernameWithRoles(usernameOrEmail)
+                .or(() -> userRepository.findByEmailWithRoles(usernameOrEmail))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with username or email: " + usernameOrEmail));
 
         if (!user.getIsActive()) {
@@ -104,6 +104,10 @@ public class CustomUserDetailsService implements UserDetailsService {
         }
 
         public Long getUserId() {
+            return user.getId();
+        }
+
+        public Long getId() {
             return user.getId();
         }
 

@@ -9,6 +9,7 @@ import java.util.Map;
  */
 public class DashboardDto {
 
+    private Long id;
     private String userType;
     private String username;
     private String fullName;
@@ -23,6 +24,14 @@ public class DashboardDto {
     public DashboardDto() {}
 
     // Getters and Setters
+    public Long getId() {
+        return id;
+    }
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     public String getUserType() {
         return userType;
     }

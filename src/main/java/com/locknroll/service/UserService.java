@@ -43,10 +43,10 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
     
     /**
-     * Create a new user
+     * Create a new user with password
      */
     @CacheEvict(value = "users", allEntries = true)
-    public UserDto createUser(UserDto userDto, String createdBy) {
+    public UserDto createUser(UserDto userDto, String password) {
         logger.info("Creating new user: {}", userDto.getUsername());
         
         // Check if username already exists
@@ -62,7 +62,50 @@ public class UserService {
         User user = new User();
         user.setUsername(userDto.getUsername());
         user.setEmail(userDto.getEmail());
-        user.setPassword(passwordEncoder.encode("defaultPassword123")); // Default password
+        user.setPassword(passwordEncoder.encode(password)); // Use provided password
+        user.setFirstName(userDto.getFirstName());
+        user.setLastName(userDto.getLastName());
+        user.setPhoneNumber(userDto.getPhoneNumber());
+        user.setIsActive(userDto.getIsActive() != null ? userDto.getIsActive() : true);
+        user.setIsEmailVerified(false);
+        user.setCreatedBy("system"); // System created user
+        
+        // Assign roles if provided
+        if (userDto.getRoles() != null && !userDto.getRoles().isEmpty()) {
+            Set<Role> roles = userDto.getRoles().stream()
+                    .map(roleName -> roleRepository.findByName(roleName)
+                            .orElseThrow(() -> new ResourceNotFoundException("Role not found: " + roleName)))
+                    .collect(Collectors.toSet());
+            user.setRoles(roles);
+        }
+        
+        User savedUser = userRepository.save(user);
+        logger.info("User created successfully: {}", savedUser.getUsername());
+        
+        return convertToDto(savedUser);
+    }
+    
+    /**
+     * Create a new user with createdBy parameter
+     */
+    @CacheEvict(value = "users", allEntries = true)
+    public UserDto createUser(UserDto userDto, String createdBy, String password) {
+        logger.info("Creating new user: {}", userDto.getUsername());
+        
+        // Check if username already exists
+        if (userRepository.existsByUsername(userDto.getUsername())) {
+            throw new UserAlreadyExistsException("Username already exists: " + userDto.getUsername());
+        }
+        
+        // Check if email already exists
+        if (userRepository.existsByEmail(userDto.getEmail())) {
+            throw new UserAlreadyExistsException("Email already exists: " + userDto.getEmail());
+        }
+        
+        User user = new User();
+        user.setUsername(userDto.getUsername());
+        user.setEmail(userDto.getEmail());
+        user.setPassword(passwordEncoder.encode(password)); // Use provided password
         user.setFirstName(userDto.getFirstName());
         user.setLastName(userDto.getLastName());
         user.setPhoneNumber(userDto.getPhoneNumber());
@@ -85,6 +128,20 @@ public class UserService {
         return convertToDto(savedUser);
     }
     
+    /**
+     * Encode password
+     */
+    public String encodePassword(String password) {
+        return passwordEncoder.encode(password);
+    }
+    
+    /**
+     * Check if password matches
+     */
+    public boolean matchesPassword(String rawPassword, String encodedPassword) {
+        return passwordEncoder.matches(rawPassword, encodedPassword);
+    }
+
     /**
      * Get user by ID
      */

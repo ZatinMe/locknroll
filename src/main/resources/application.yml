@@ -16,6 +16,13 @@ spring:
     username: zatinmeraz
     password: 
     driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      leak-detection-threshold: 60000
   
   jpa:
     hibernate:
@@ -41,6 +48,23 @@ spring:
           max-active: 8
           max-idle: 8
           min-idle: 0
+
+  # Kafka Configuration
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      group-id: locknroll-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: "com.locknroll.event"
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      acks: all
+      retries: 3
+      enable-idempotence: true
 
 # Redisson Configuration
 redisson:
@@ -68,6 +92,12 @@ logging:
     file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId}] %logger{36} - %msg%n"
   file:
     name: logs/redis-learning.log
+
+# JWT Configuration
+app:
+  jwt:
+    secret: "mySecretKeyForJWTTokenGenerationThatIsAtLeast256BitsLongForSecurity123456789"
+    expiration: 86400000 # 24 hours in milliseconds
 
 # Management endpoints
 management:
