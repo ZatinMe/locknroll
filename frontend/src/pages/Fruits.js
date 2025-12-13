@@ -336,3 +336,6 @@ const Fruits = () => {
 };
 
 export default Fruits;
+
+
+// this is new comment change
